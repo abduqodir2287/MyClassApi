@@ -1,12 +1,14 @@
 from fastapi import Response, HTTPException, status, Depends, Request
+from sqlalchemy.exc import IntegrityError
 
 from src.configs.logger_setup import logger
 from src.domain.authentication.dependencies import check_user_role
 from src.domain.enums import UserRole
 from src.domain.users.schema import UsersResponseForPost, UsersModelForPost, UsersModel, AuthorizedUser
 from src.infrastructure.database.postgres.students.client import StudentsTable
+from src.infrastructure.database.postgres.teachers.client import TeachersTable
 from src.infrastructure.database.postgres.users.client import UsersTable
-from src.domain.authentication.auth import create_access_token, get_token
+from src.domain.authentication.auth import create_access_token, get_token, decode_access_token
 
 
 class UsersRouterService:
@@ -14,6 +16,7 @@ class UsersRouterService:
 	def __init__(self) -> None:
 		self.users_table = UsersTable()
 		self.students_table = StudentsTable()
+		self.teachers_table = TeachersTable()
 
 
 	async def get_all_users(self) -> list[UsersModel]:
@@ -33,6 +36,17 @@ class UsersRouterService:
 		return all_users
 
 
+	async def get_info_about_user(self, token: str = Depends(get_token)) -> UsersModel:
+		user_info = decode_access_token(token)
+
+		info = await self.users_table.select_users(user_id=int(user_info.get("sub")))
+
+		return UsersModel(
+			id=info.id, username=info.username, role=info.role,
+			created_at=info.created_at, updated_at=info.updated_at
+		)
+
+
 	async def user_authorization_service(self, response: Response, username: str, password: str) -> AuthorizedUser:
 		user_by_username = await self.users_table.select_users(username=username)
 
@@ -50,34 +64,32 @@ class UsersRouterService:
 		return AuthorizedUser(Result="User authorized successfully !")
 
 
-	# async def add_user_superadmin_service(self, username: str, password: str) -> UsersResponseForPost:
-	# 	user_model = UsersModelForPost(
-	# 		username=username, password=password, role=UserRole.superadmin
-	# 	)
-	#
-	# 	user_id = await self.users_table.insert_user(user_model)
-	# 	await self.students_table.insert_student(username, password)
-	#
-	# 	return UsersResponseForPost(UserId=user_id)
+	async def add_user_service(self, username: str, password: str, role: UserRole,
+							   token: str = Depends(get_token)) -> UsersResponseForPost:
+		try:
+			user_role = await check_user_role(token)
+			allowed_roles = {UserRole.superadmin, UserRole.teacher}
 
+			if user_role not in allowed_roles or (role == UserRole.superadmin and user_role != UserRole.superadmin):
+				logger.warning("Not enough rights!")
+				raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights!")
 
+			user_id = await self.users_table.insert_user(UsersModelForPost(username=username, password=password, role=role))
 
-	async def add_student_service(self, username: str, password: str,
-	                              token: str = Depends(get_token)) -> UsersResponseForPost:
-		user_role = await check_user_role(token)
+			if role == UserRole.student:
+				await self.students_table.insert_student(username, password)
 
-		if user_role != UserRole.superadmin and user_role != UserRole.teacher:
-			logger.warning("Not enough rights !")
-			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights !")
+				logger.info("Student successfully added to DB")
 
-		user_model = UsersModelForPost(
-			username=username, password=password, role=UserRole.student
-		)
+			if role == UserRole.teacher:
+				await self.teachers_table.insert_teacher(username, password)
 
-		user_id = await self.users_table.insert_user(user_model)
-		await self.students_table.insert_student(username, password)
+				logger.info("Teacher successfully added to DB")
 
-		return UsersResponseForPost(UserId=user_id)
+			return UsersResponseForPost(UserId=user_id)
+
+		except IntegrityError:
+			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this username already exists")
 
 
 	async def delete_user_service(self, username: str, token: str = Depends(get_token)) -> None:

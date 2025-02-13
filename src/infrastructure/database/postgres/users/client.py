@@ -54,7 +54,6 @@ class UsersTable:
 			return insert_into.id
 
 
-
 	async def delete_user_by_username(self, username: str) -> bool | None:
 		async with self.async_session() as session:
 			async with session.begin():

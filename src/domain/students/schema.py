@@ -18,5 +18,8 @@ class StudentsModel(BaseModel):
 	subject: Optional[str] = Field(None, description="The subject that interests the student")
 	interests: Optional[str] = Field(None, description="General interests of the student")
 	idol: Optional[str] = Field(None, description="Student's Idol")
+	bio: Optional[str] = Field(None, description="Brief biography of the teacher")
+	social_link: Optional[str] = Field(None, description="Teacher's social link (e.g., Instagram, Facebook ...)")
 	created_at: datetime = Field(..., description="Date and time when the user was created")
 	updated_at: datetime = Field(..., description="Date and time when the user was last updated")
+
