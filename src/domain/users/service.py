@@ -92,6 +92,25 @@ class UsersRouterService:
 			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this username already exists")
 
 
+	async def update_user_service(self, username: str, password: str, new_username: str) -> None:
+		try:
+			get_user = await self.users_table.select_users(username=username)
+
+			if get_user is None:
+				logger.warning("User not found")
+				raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User with this username not found")
+
+			if get_user.password != password:
+				logger.warning("The user entered an incorrect password.")
+				raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
+
+			await self.users_table.update_user_username(username, password, new_username)
+
+		except IntegrityError:
+			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this username already exists")
+
+
+
 	async def delete_user_service(self, username: str, token: str = Depends(get_token)) -> None:
 		user_role = await check_user_role(token)
 

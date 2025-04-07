@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 
 from src.domain.users.schema import UsersModelForPost, UsersModel
 from src.infrastructure.database.postgres.models import Users
@@ -65,5 +65,19 @@ class UsersTable:
 				if result.rowcount > 0:
 					return True
 
+
+	async def update_user_username(self, username: str, password: str, new_username: str) -> bool | None:
+		async with self.async_session() as session:
+			async with session.begin():
+				update_user = update(Users).where(
+					username == Users.username, password == Users.password).values(
+					username=new_username
+				)
+
+				result = await session.execute(update_user)
+				await session.commit()
+
+				if result.rowcount > 0:
+					return True
 
 

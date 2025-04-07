@@ -3,7 +3,7 @@ from logging.handlers import RotatingFileHandler
 
 from src.configs.config import settings
 
-logger = logging.getLogger("BooksApi")
+logger = logging.getLogger("MyClassApi")
 logger.setLevel(level=settings.LOG_LEVEL)
 
 formatter = logging.Formatter(settings.LOG_FORMAT)

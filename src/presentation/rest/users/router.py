@@ -39,6 +39,15 @@ async def add_user(
 	return await users_service.add_user_service(username, password, role, token)
 
 
+@users_router.patch("/change_username", status_code=status.HTTP_204_NO_CONTENT)
+async def update_user_username(
+		username: str = Query(..., description="Username of the user", min_length=3, max_length=50),
+		password: str = Query(..., description="User's Password", min_length=8, max_length=50),
+		new_username: str = Query(..., description="New Username of the user", min_length=3, max_length=50)
+) -> None:
+	await users_service.update_user_service(username, password, new_username)
+
+
 @users_router.delete("/{username}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_by_username(
 		token: str = Depends(get_token), username: str = Path(..., description="The username you want to delete")
