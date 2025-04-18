@@ -1,7 +1,7 @@
 from typing import Optional
 from sqlalchemy import select, delete, update
 
-from src.domain.users.schema import UsersModelForPost, UsersModel
+from src.domain.users.schema import AddUserModel, UsersModel
 from src.infrastructure.database.postgres.models import Users
 from src.infrastructure.database.postgres.database import Base
 
@@ -36,7 +36,7 @@ class UsersTable:
 			return all_users.scalars().all()
 
 
-	async def insert_user(self, user_model: UsersModelForPost) -> int:
+	async def insert_user(self, user_model: AddUserModel) -> int:
 		async with self.async_session() as session:
 			async with session.begin():
 

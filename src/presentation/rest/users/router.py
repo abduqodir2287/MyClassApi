@@ -1,61 +1,77 @@
-from fastapi import APIRouter, status, Query, Response, Depends, Request, Path
+from fastapi import APIRouter, status, Response, Depends, Request, Path, Body
 
-from src.domain.authentication.auth import get_token
-from src.domain.enums import UserRole
-from src.domain.users.schema import UsersResponseForPost, UsersModel, AuthorizedUser
+from src.infrastructure.authentication.service import get_token
+from src.domain.schema import ResponseForPost
+from src.domain.users.schema import AuthorizedUser, UsersModelForPost, UsersModelForPatch, \
+	UsersStudentModel, UsersModelForGet, UsersModel
 from src.domain.users.service import UsersRouterService
+
 
 users_router = APIRouter(prefix="/Users", tags=["Users"])
 
 users_service = UsersRouterService()
 
 
-@users_router.get("", response_model=list[UsersModel], status_code=status.HTTP_200_OK)
-async def get_all_users() -> list[UsersModel]:
-	return await users_service.get_all_users()
+@users_router.get("", response_model=list[UsersModelForGet], status_code=status.HTTP_200_OK)
+async def get_all_users() -> list[UsersModelForGet]:
+	return await users_service.get_all_users_service()
 
 
-@users_router.post("/authorization", response_model=AuthorizedUser, status_code=status.HTTP_200_OK)
-async def user_authorization(
-		response: Response,
-		username: str = Query(..., description="Username of the user", min_length=3, max_length=50),
-		password: str = Query(..., description="User's Password", min_length=8, max_length=50)
-) -> AuthorizedUser:
-	return await users_service.user_authorization_service(response, username, password)
+@users_router.post("/Authorization", response_model=AuthorizedUser, status_code=status.HTTP_200_OK)
+async def user_authorization(response: Response, user_model: UsersModelForPost = Body(...)) -> AuthorizedUser:
+	return await users_service.user_authorization_service(response, user_model)
 
 
-@users_router.get("/User_info", response_model=UsersModel, status_code=status.HTTP_200_OK)
-async def user_info(token: str = Depends(get_token)) -> UsersModel:
+@users_router.post("/Add_user", response_model=AuthorizedUser, status_code=status.HTTP_201_CREATED)
+async def add_just_user(response: Response, user_model: UsersModelForPost = Body(...)) -> AuthorizedUser:
+	return await users_service.add_just_user_service(response, user_model)
+
+
+@users_router.get("/User_info", response_model=UsersModelForGet, status_code=status.HTTP_200_OK)
+async def user_info(token: str = Depends(get_token)) -> UsersModelForGet:
 	return await users_service.get_info_about_user(token)
 
 
-@users_router.post("", response_model=UsersResponseForPost, status_code=status.HTTP_201_CREATED)
-async def add_user(
+@users_router.get("/{username}", response_model=UsersModelForGet, status_code=status.HTTP_200_OK)
+async def get_user_by_username(username: str = Path(..., description="User's username")) -> UsersModelForGet:
+	return await users_service.get_user_by_username_service(username)
+
+
+@users_router.get("/Get_student/With_password/{username}", response_model=UsersModel, status_code=status.HTTP_200_OK)
+async def get_student_with_password(username: str = Path(..., description="Student's username"),
+									token: str = Depends(get_token)) -> UsersModel:
+	return await users_service.get_student_with_password_service(username, token)
+
+
+@users_router.post("/Add_teacher", response_model=ResponseForPost, status_code=status.HTTP_201_CREATED)
+async def add_teacher_user(
 		token: str = Depends(get_token),
-		username: str = Query(..., description="Username of the user (e.g., Unique)", min_length=3, max_length=50),
-		password: str = Query(..., description="User's Password", min_length=8, max_length=50),
-		role: UserRole = Query(..., description="User Role")
-) -> UsersResponseForPost:
-	return await users_service.add_user_service(username, password, role, token)
+		user_model: UsersModelForPost = Body(...)
+) -> ResponseForPost:
+	return await users_service.add_teacher_service(user_model, token)
 
 
-@users_router.patch("/change_username", status_code=status.HTTP_204_NO_CONTENT)
-async def update_user_username(
-		username: str = Query(..., description="Username of the user", min_length=3, max_length=50),
-		password: str = Query(..., description="User's Password", min_length=8, max_length=50),
-		new_username: str = Query(..., description="New Username of the user", min_length=3, max_length=50)
-) -> None:
-	await users_service.update_user_service(username, password, new_username)
+@users_router.post("/Add_student", response_model=ResponseForPost, status_code=status.HTTP_201_CREATED)
+async def add_student_user(
+		token: str = Depends(get_token),
+		user_model: UsersStudentModel = Body(...)
+) -> ResponseForPost:
+	return await users_service.add_student_service(user_model, token)
 
 
-@users_router.delete("/{username}", status_code=status.HTTP_204_NO_CONTENT)
+@users_router.patch("/Change_username", status_code=status.HTTP_204_NO_CONTENT)
+async def update_user_username(users_model: UsersModelForPatch = Body(...)) -> None:
+	await users_service.update_user_service(users_model)
+
+
+@users_router.delete("/Delete_user/{username}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_by_username(
 		token: str = Depends(get_token), username: str = Path(..., description="The username you want to delete")
 ) -> None:
 	await users_service.delete_user_service(username, token)
 
 
-@users_router.post("/logout_user", status_code=status.HTTP_204_NO_CONTENT)
+@users_router.post("/Logout_user", status_code=status.HTTP_204_NO_CONTENT)
 async def logout_user(response: Response, request: Request) -> None:
 	await users_service.logout_service(request, response)
 

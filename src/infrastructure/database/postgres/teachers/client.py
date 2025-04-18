@@ -1,4 +1,4 @@
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from typing import Optional
 
 from src.domain.teachers.schema import TeachersModel
@@ -53,16 +53,29 @@ class TeachersTable:
             return insert_into.id
 
 
+    async def delete_teacher_by_username(self, username: str) -> bool | None:
+        async with self.async_session() as session:
+            async with session.begin():
+                delete_teacher = delete(Teachers).where(username == Teachers.username)
+                result = await session.execute(delete_teacher)
+
+                await session.commit()
+
+                if result.rowcount > 0:
+                    return True
+
+
     async def update_teacher_info(self, username: str, password: str, teacher_info: TeachersModel) -> bool | None:
         async with self.async_session() as session:
             async with session.begin():
+
                 update_teacher = update(Teachers).where(
                     username == Teachers.username, password == Teachers.password
                 ).values(
                     firstname=teacher_info.firstname, lastname=teacher_info.lastname,
                     birthDate=teacher_info.birthDate.date if teacher_info.birthDate is not None else None,
-                    age=teacher_info.age, subject=teacher_info.subject, idol=teacher_info.idol, bio=teacher_info.bio,
-                    social_link=teacher_info.social_link
+                    age=teacher_info.age, gender=teacher_info.gender, subject=teacher_info.subject,
+                    idol=teacher_info.idol, bio=teacher_info.bio, social_link=teacher_info.social_link
                 )
 
                 result = await session.execute(update_teacher)

@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from datetime import datetime, timezone
 
-from src.domain.authentication.auth import decode_access_token, get_token
+from src.infrastructure.authentication.service import decode_access_token, get_token
 from src.domain.enums import UserRole
 from src.infrastructure.database.postgres.users.client import UsersTable
 

@@ -1,10 +1,8 @@
-from typing import Optional
 from fastapi import HTTPException, status
 
 from src.configs.logger_setup import logger
-from src.domain.students.schema import StudentsModel
+from src.domain.students.schema import StudentsModel, StudentsModelForPatch
 from src.infrastructure.database.postgres.students.client import StudentsTable
-from src.domain.enums import Gender
 from src.domain.schema import Date
 
 class StudentsRouterService:
@@ -18,11 +16,12 @@ class StudentsRouterService:
 
 		for student in await self.students_table.select_students():
 
-			returned_student = StudentsModel(
-				id=student.id, username=student.username, firstname=student.firstname, lastname=student.lastname,
+			returned_student = StudentsModel(id=student.id, username=student.username,
+				class_id=student.class_id, firstname=student.firstname, lastname=student.lastname,
 				birthDate=Date(date=student.birthDate) if student.birthDate is not None else student.birthDate, # type: ignore
 				age=student.age, gender=student.gender, subject=student.subject, interests=student.interests,
-				idol=student.idol, created_at=student.created_at, updated_at=student.updated_at
+				idol=student.idol, bio=student.bio, social_link=student.social_link,
+				created_at=student.created_at, updated_at=student.updated_at
 			)
 
 			students_list.append(returned_student)
@@ -39,47 +38,56 @@ class StudentsRouterService:
 			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student with this username not found")
 
 		return StudentsModel(
-				id=get_student.id, username=get_student.username, firstname=get_student.firstname, lastname=get_student.lastname,
+				id=get_student.id, username=get_student.username, firstname=get_student.firstname,
+				class_id=get_student.class_id, lastname=get_student.lastname,
 				birthDate=Date(date=get_student.birthDate) if get_student.birthDate is not None else get_student.birthDate, # type: ignore
 				age=get_student.age, gender=get_student.gender, subject=get_student.subject, interests=get_student.interests,
-				idol=get_student.idol, created_at=get_student.created_at, updated_at=get_student.updated_at
+				idol=get_student.idol, bio=get_student.bio, social_link=get_student.social_link,
+				created_at=get_student.created_at, updated_at=get_student.updated_at
 			)
 
 
 
-	async def update_student_service(
-			self, username: str, password: str, firstname: Optional[str] = None,
-			lastname: Optional[str] = None, birth_date: Optional[Date] = None, age: Optional[int] = None,
-			gender: Optional[Gender] = None, subject: Optional[str] = None, interests: Optional[str] = None,
-			idol: Optional[str] = None, bio: Optional[str] = None, social_link: Optional[str] = None
-	) -> StudentsModel | None:
-		user_info = await self.students_table.select_students(username=username)
+	async def update_student_service(self, student_model: StudentsModelForPatch) -> StudentsModel | None:
+		user_info = await self.students_table.select_students(username=student_model.username)
 
 		if not user_info:
 			logger.warning("Student not found")
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student with this username not found")
+			raise HTTPException(
+				status_code=status.HTTP_404_NOT_FOUND,
+				detail="Student with this username not found"
+			)
 
-		if birth_date is None and user_info.birthDate is not None:
-			birth_date = Date(date=user_info.birthDate) # type: ignore
+		if user_info.password != student_model.password:
+			logger.warning("Wrong password")
+			raise HTTPException(
+				status_code=status.HTTP_400_BAD_REQUEST,
+				detail="You are writing the wrong password."
+			)
 
-		elif birth_date is None and user_info.birthDate is None:
-			birth_date = None
+		if student_model.birthDate is None:
+			student_model.birthDate = (
+				Date(date=user_info.birthDate) if user_info.birthDate else None  # type: ignore
+			)
 
-		student_model = StudentsModel(
-			id=user_info.id, username=user_info.username, firstname=firstname if firstname is not None else user_info.firstname,
-			lastname=lastname if lastname is not None else user_info.lastname, birthDate=birth_date,
-			age=age if age is not None else user_info.age, gender=gender if gender is not None else user_info.gender,
-			subject=subject if subject is not None else user_info.subject,
-			interests=interests if interests is not None else user_info.interests,
-			idol=idol if idol is not None else user_info.idol, bio=bio if bio is not None else user_info.bio,
-			social_link=social_link if social_link is not None else user_info.social_link,
+		student = StudentsModel(
+			id=user_info.id, username=user_info.username, class_id=user_info.class_id,
+			firstname=student_model.firstname if student_model.firstname is not None else user_info.firstname,
+			lastname=student_model.lastname if student_model.lastname is not None else user_info.lastname,
+			birthDate=student_model.birthDate, age=student_model.age if student_model.age is not None else user_info.age,
+			gender=student_model.gender if student_model.gender is not None else user_info.gender,
+			subject=student_model.subject if student_model.subject is not None else user_info.subject,
+			interests=student_model.interests if student_model.interests is not None else user_info.interests,
+			idol=student_model.idol if student_model.idol is not None else user_info.idol,
+			bio=student_model.bio if student_model.bio is not None else user_info.bio,
+			social_link=student_model.social_link if student_model.social_link is not None else user_info.social_link,
 			created_at=user_info.created_at, updated_at=user_info.updated_at
 		)
 
-		update = await self.students_table.update_student_info(username, password, student_model)
+		update = await self.students_table.update_student_info(student_model.username, student_model.password, student)
 
 		if update:
-			return student_model
+			return student
 
 
 

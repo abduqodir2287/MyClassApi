@@ -29,3 +29,9 @@ class Date(BaseModel):
 		                    detail="Write the correct birthday. The date must be in the format 'DD-MM-YYYY'.")
 
 
+class ResponseForPost(BaseModel):
+	Status: str = "Success"
+	ID: int = Field(..., description='Added resource ID')
+
+
+

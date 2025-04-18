@@ -1,8 +1,7 @@
 from fastapi import HTTPException, status
-from typing import Optional
 
 from src.configs.logger_setup import logger
-from src.domain.teachers.schema import TeachersModel
+from src.domain.teachers.schema import TeachersModel, TeachersModelForPatch
 from src.infrastructure.database.postgres.teachers.client import TeachersTable
 from src.domain.schema import Date
 
@@ -21,7 +20,7 @@ class TeachersRouterService:
             returned_teacher = TeachersModel(
                 id=teacher.id, username=teacher.username, firstname=teacher.firstname, lastname=teacher.lastname,
                 birthDate=Date(date=teacher.birthDate) if teacher.birthDate is not None else teacher.birthDate, # type: ignore
-                age=teacher.age, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
+                age=teacher.age, gender=teacher.gender, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
                 social_link=teacher.social_link, created_at=teacher.created_at, updated_at=teacher.updated_at
             )
 
@@ -37,40 +36,47 @@ class TeachersRouterService:
             logger.warning("Teacher not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher with this username not found")
 
-        return TeachersModel(id=teacher.id, username=username, firstname=teacher.firstname, lastname=teacher.lastname,
-                             birthDate=Date(date=teacher.birthDate) if teacher.birthDate is not None else None, # type: ignore
-                             age=teacher.age, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
-                             social_link=teacher.social_link, created_at=teacher.created_at, updated_at=teacher.updated_at)
+        return TeachersModel(
+            id=teacher.id, username=username, firstname=teacher.firstname, lastname=teacher.lastname,
+            birthDate=Date(date=teacher.birthDate) if teacher.birthDate is not None else None, # type: ignore
+            age=teacher.age, gender=teacher.gender, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
+            social_link=teacher.social_link, created_at=teacher.created_at, updated_at=teacher.updated_at
+        )
 
-    async def update_teacher_info_service(
-            self, username: str, password: str, firstname: Optional[str] = None,
-			lastname: Optional[str] = None, birth_date: Optional[Date] = None, age: Optional[int] = None,
-			subject: Optional[str] = None, idol: Optional[str] = None, bio: Optional[str] = None,
-            social_link: Optional[str] = None
-    ) -> TeachersModel:
-        teacher = await self.table.select_teachers(username=username)
+    async def update_teacher_info_service(self, teacher_model: TeachersModelForPatch) -> TeachersModel:
+        teacher_info = await self.table.select_teachers(username=teacher_model.username)
 
-        if not teacher:
+        if not teacher_info:
             logger.warning("Teacher not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher with this username not found")
 
-        if birth_date is None and teacher.birthDate is not None:
-            birth_date = Date(date=teacher.birthDate) # type: ignore
+        if teacher_info.password != teacher_model.password:
+            logger.warning("Wrong password")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You are writing the wrong password."
+            )
 
-        elif birth_date is None and teacher.birthDate is None:
-            birth_date = None
+        if teacher_model.birthDate is None:
+            teacher_model.birthDate = (
+                Date(date=teacher_info.birthDate) if teacher_info.birthDate else None  # type: ignore
+            )
 
-        teacher_model = TeachersModel(
-            id=teacher.id, username=username, firstname=firstname if firstname is not None else teacher.firstname,
-            lastname=lastname if lastname is not None else teacher.lastname, birthDate=birth_date,
-            age=age if age is not None else teacher.age, subject=subject if subject is not None else teacher.subject,
-            idol=idol if idol is not None else teacher.idol, bio=bio if bio is not None else teacher.bio,
-            social_link=social_link if social_link is not None else teacher.social_link,
-            created_at=teacher.created_at, updated_at=teacher.updated_at
+        returned_teacher = TeachersModel(
+            id=teacher_info.id, username=teacher_model.username, birthDate=teacher_model.birthDate,
+            firstname=teacher_model.firstname if teacher_model.firstname is not None else teacher_info.firstname,
+            lastname=teacher_model.lastname if teacher_model.lastname is not None else teacher_info.lastname,
+            age=teacher_model.age if teacher_model.age is not None else teacher_info.age,
+            gender=teacher_model.gender if teacher_model.gender is not None else teacher_info.gender,
+            subject=teacher_model.subject if teacher_model.subject is not None else teacher_info.subject,
+            idol=teacher_model.idol if teacher_model.idol is not None else teacher_info.idol,
+            bio=teacher_model.bio if teacher_model.bio is not None else teacher_info.bio,
+            social_link=teacher_model.social_link if teacher_model.social_link is not None else teacher_info.social_link,
+            created_at=teacher_info.created_at, updated_at=teacher_info.updated_at
         )
 
-        update = await self.table.update_teacher_info(username, password, teacher_model)
+        update = await self.table.update_teacher_info(teacher_model.username, teacher_model.password, returned_teacher)
 
         if update:
-            return teacher_model
+            return returned_teacher
 
