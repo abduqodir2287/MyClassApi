@@ -7,7 +7,6 @@ from src.domain.schema import Date
 
 
 class TeachersModel(BaseModel):
-    id: int = Field(..., description="Unique identifier of the Teacher", )
     username: str = Field(..., description="Username of the Teacher (e.g., Unique)")
     firstname: Optional[str] = Field(None, description="First name of the Teacher")
     lastname: Optional[str] = Field(None, description="Last name of the Teacher")

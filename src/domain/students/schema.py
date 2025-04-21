@@ -6,7 +6,6 @@ from src.domain.enums import Gender
 from src.domain.schema import Date
 
 class StudentsModel(BaseModel):
-	id: int = Field(..., description="Unique identifier of the student", )
 	username: str = Field(..., description="Username of the student (e.g., Unique)")
 	class_id: int = Field(..., description="Unique identifier of the class this student is in")
 	firstname: Optional[str] = Field(None, description="First name of the student")

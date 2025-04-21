@@ -18,7 +18,7 @@ class TeachersRouterService:
 
         for teacher in all_teachers:
             returned_teacher = TeachersModel(
-                id=teacher.id, username=teacher.username, firstname=teacher.firstname, lastname=teacher.lastname,
+                username=teacher.username, firstname=teacher.firstname, lastname=teacher.lastname,
                 birthDate=Date(date=teacher.birthDate) if teacher.birthDate is not None else teacher.birthDate, # type: ignore
                 age=teacher.age, gender=teacher.gender, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
                 social_link=teacher.social_link, created_at=teacher.created_at, updated_at=teacher.updated_at
@@ -37,7 +37,7 @@ class TeachersRouterService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher with this username not found")
 
         return TeachersModel(
-            id=teacher.id, username=username, firstname=teacher.firstname, lastname=teacher.lastname,
+            username=username, firstname=teacher.firstname, lastname=teacher.lastname,
             birthDate=Date(date=teacher.birthDate) if teacher.birthDate is not None else None, # type: ignore
             age=teacher.age, gender=teacher.gender, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
             social_link=teacher.social_link, created_at=teacher.created_at, updated_at=teacher.updated_at
@@ -63,7 +63,7 @@ class TeachersRouterService:
             )
 
         returned_teacher = TeachersModel(
-            id=teacher_info.id, username=teacher_model.username, birthDate=teacher_model.birthDate,
+            username=teacher_model.username, birthDate=teacher_model.birthDate,
             firstname=teacher_model.firstname if teacher_model.firstname is not None else teacher_info.firstname,
             lastname=teacher_model.lastname if teacher_model.lastname is not None else teacher_info.lastname,
             age=teacher_model.age if teacher_model.age is not None else teacher_info.age,

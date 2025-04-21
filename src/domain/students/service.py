@@ -16,7 +16,7 @@ class StudentsRouterService:
 
 		for student in await self.students_table.select_students():
 
-			returned_student = StudentsModel(id=student.id, username=student.username,
+			returned_student = StudentsModel(username=student.username,
 				class_id=student.class_id, firstname=student.firstname, lastname=student.lastname,
 				birthDate=Date(date=student.birthDate) if student.birthDate is not None else student.birthDate, # type: ignore
 				age=student.age, gender=student.gender, subject=student.subject, interests=student.interests,
@@ -38,12 +38,12 @@ class StudentsRouterService:
 			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student with this username not found")
 
 		return StudentsModel(
-				id=get_student.id, username=get_student.username, firstname=get_student.firstname,
-				class_id=get_student.class_id, lastname=get_student.lastname,
+				username=get_student.username, firstname=get_student.firstname, class_id=get_student.class_id,
+				lastname=get_student.lastname, age=get_student.age, gender=get_student.gender,
 				birthDate=Date(date=get_student.birthDate) if get_student.birthDate is not None else get_student.birthDate, # type: ignore
-				age=get_student.age, gender=get_student.gender, subject=get_student.subject, interests=get_student.interests,
-				idol=get_student.idol, bio=get_student.bio, social_link=get_student.social_link,
-				created_at=get_student.created_at, updated_at=get_student.updated_at
+				subject=get_student.subject, interests=get_student.interests, idol=get_student.idol,
+				bio=get_student.bio, social_link=get_student.social_link, created_at=get_student.created_at,
+				updated_at=get_student.updated_at
 			)
 
 
@@ -71,7 +71,7 @@ class StudentsRouterService:
 			)
 
 		student = StudentsModel(
-			id=user_info.id, username=user_info.username, class_id=user_info.class_id,
+			username=user_info.username, class_id=user_info.class_id,
 			firstname=student_model.firstname if student_model.firstname is not None else user_info.firstname,
 			lastname=student_model.lastname if student_model.lastname is not None else user_info.lastname,
 			birthDate=student_model.birthDate, age=student_model.age if student_model.age is not None else user_info.age,

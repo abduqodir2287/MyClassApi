@@ -138,11 +138,12 @@ class UsersRouterService:
 
 				raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights!")
 
+			await self.students_table.insert_student(username=user_model.username, password=user_model.password,
+													 class_id=user_model.class_id)
+
 			user_id = await self.users_table.insert_user(AddUserModel(
 				username=user_model.username, password=user_model.password, role=UserRole.student))
 
-			await self.students_table.insert_student(username=user_model.username, password=user_model.password,
-													 class_id=user_model.class_id)
 			logger.info("Teacher successfully added to DB")
 
 			return ResponseForPost(ID=user_id)

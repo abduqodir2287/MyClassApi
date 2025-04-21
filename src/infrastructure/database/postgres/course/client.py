@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from src.infrastructure.database.postgres.database import Base
 from src.infrastructure.database.postgres.models import Class
@@ -43,7 +43,7 @@ class ClassTable:
             async with session.begin():
                 insert_into = Class(
                     class_name=class_model.class_name, students_count=class_model.students_count,
-                    teacher_id=class_model.teacher_id, school_year=class_model.school_year
+                    teacher_username=class_model.teacher_username, school_year=class_model.school_year
                 )
                 session.add(insert_into)
 
@@ -52,5 +52,24 @@ class ClassTable:
             await session.refresh(insert_into)
 
             return insert_into.id
+
+
+    async def update_class_info(self, class_model: ClassModel) -> bool | None:
+        async with self.async_session() as session:
+            async with session.begin():
+                update_class = update(Class).where(
+                    class_model.class_name == Class.class_name).values(
+                    students_count=class_model.students_count, school_year=class_model.school_year,
+                    class_leader_username=class_model.class_leader_username, description=class_model.description,
+                    class_room_number=class_model.class_room_number
+                )
+
+                result = await session.execute(update_class)
+                await session.commit()
+
+                if result.rowcount > 0:
+                    return True
+
+
 
 
