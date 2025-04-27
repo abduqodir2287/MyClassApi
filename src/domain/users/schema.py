@@ -23,24 +23,29 @@ class UsersModelForGet(BaseModel):
 
 class AddUserModel(BaseModel):
 	username: str = Field(..., description="Username of the user (e.g., Unique)", min_length=3, max_length=50)
-	password: str = Field(..., description="User's Password", min_length=8, max_length=50)
+	password: str = Field(..., description="User's Password", min_length=5, max_length=50)
 	role: UserRole = Field(..., description="Role assigned to the user (e.g., superadmin, teacher, student or user)")
 
 
 class UsersModelForPost(BaseModel):
 	username: str = Field(..., description="Username of the user (e.g., Unique)", min_length=3, max_length=50)
-	password: str = Field(..., description="User's Password", min_length=8, max_length=50)
+	password: str = Field(..., description="User's Password", min_length=5, max_length=50)
 
 
 class UsersModelForPatch(BaseModel):
 	username: str = Field(..., description="Username of the user", min_length=3, max_length=50),
-	password: str = Field(..., description="User's Password", min_length=8, max_length=50),
+	password: str = Field(..., description="User's Password", min_length=5, max_length=50),
 	new_username: str = Field(..., description="New Username of the user", min_length=3, max_length=50)
 
 
+class ChangePasswordModel(BaseModel):
+	username: str = Field(..., description="Username of the user", min_length=3, max_length=50),
+	password: str = Field(..., description="User's Password", min_length=5, max_length=50),
+	new_password: str = Field(..., description="User's Password", min_length=5, max_length=50)
+
 class UsersStudentModel(BaseModel):
 	username: str = Field(..., description="Username of the user (e.g., Unique)", min_length=3, max_length=50)
-	password: str = Field(..., description="User's Password", min_length=8, max_length=50)
+	password: str = Field(..., description="User's Password", min_length=5, max_length=50)
 	class_id: int = Field(..., description="Unique identifier of the class this student is in")
 
 

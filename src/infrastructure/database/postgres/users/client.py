@@ -81,3 +81,18 @@ class UsersTable:
 					return True
 
 
+	async def update_user_password(self, username: str, password: str, new_password: str) -> bool | None:
+		async with self.async_session() as session:
+			async with session.begin():
+				update_user = update(Users).where(
+					username == Users.username, password == Users.password).values(
+					password=new_password
+				)
+
+				result = await session.execute(update_user)
+				await session.commit()
+
+				if result.rowcount > 0:
+					return True
+
+

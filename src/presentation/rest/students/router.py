@@ -1,4 +1,7 @@
+from typing import Optional
+
 from fastapi import APIRouter, status, Path
+from fastapi.params import Query
 
 from src.domain.students.service import StudentsRouterService
 from src.domain.students.schema import StudentsModel, StudentsModelForPatch
@@ -8,8 +11,10 @@ students_router = APIRouter(prefix="/Students", tags=["Students"])
 students_service = StudentsRouterService()
 
 @students_router.get("", response_model=list[StudentsModel], status_code=status.HTTP_200_OK)
-async def get_all_students() -> list[StudentsModel]:
-	return await students_service.get_all_students_service()
+async def get_all_students(
+		search_value: Optional[str] = Query(None, description="The criteria by which you want to find a student")
+) -> list[StudentsModel]:
+	return await students_service.get_all_students_service(search_value)
 
 
 @students_router.get("/{username}", response_model=StudentsModel, status_code=status.HTTP_200_OK)

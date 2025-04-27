@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, status, Path
 
 from src.domain.teachers.schema import TeachersModel, TeachersModelForPatch
@@ -9,8 +10,8 @@ teachers_service = TeachersRouterService()
 
 
 @teachers_router.get("", response_model=list[TeachersModel], status_code=status.HTTP_200_OK)
-async def get_all_teachers() -> list[TeachersModel]:
-	return await teachers_service.get_all_teachers_service()
+async def get_all_teachers(search_value: Optional[str] = None) -> list[TeachersModel]:
+	return await teachers_service.get_all_teachers_service(search_value)
 
 
 @teachers_router.get("/{username}", response_model=TeachersModel, status_code=status.HTTP_200_OK)

@@ -38,6 +38,18 @@ class ClassTable:
             return all_classes.scalars().all()
 
 
+
+    async def select_class_like(self, class_name: Optional[str] = None) -> list[ClassModel]:
+        async with self.async_session() as session:
+            select_classes = select(Class)
+
+            if class_name is not None:
+                select_classes = select_classes.where(Class.class_name.like(f"%{class_name}%"))
+
+            result = await session.execute(select_classes)
+            return result.scalars().all()
+
+
     async def insert_class(self, class_model: ClassModelForPost) -> int:
         async with self.async_session() as session:
             async with session.begin():

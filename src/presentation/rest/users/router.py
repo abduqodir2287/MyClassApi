@@ -3,7 +3,7 @@ from fastapi import APIRouter, status, Response, Depends, Request, Path, Body
 from src.infrastructure.authentication.service import get_token
 from src.domain.schema import ResponseForPost
 from src.domain.users.schema import AuthorizedUser, UsersModelForPost, UsersModelForPatch, \
-	UsersStudentModel, UsersModelForGet, UsersModel
+	UsersStudentModel, UsersModelForGet, UsersModel, ChangePasswordModel
 from src.domain.users.service import UsersRouterService
 
 
@@ -62,6 +62,11 @@ async def add_student_user(
 @users_router.patch("/change_username", status_code=status.HTTP_204_NO_CONTENT)
 async def update_user_username(users_model: UsersModelForPatch = Body(...)) -> None:
 	await users_service.update_user_service(users_model)
+
+
+@users_router.patch("/change_password", status_code=status.HTTP_204_NO_CONTENT)
+async def update_user_password(users_model: ChangePasswordModel = Body(...)) -> None:
+	await users_service.update_user_password_service(users_model)
 
 
 @users_router.delete("/delete_user/{username}", status_code=status.HTTP_204_NO_CONTENT)

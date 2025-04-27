@@ -18,7 +18,7 @@ class Users(Base):
 class Class(Base):
 	__tablename__ = "class"
 	id = Column(Integer, primary_key=True)
-	class_name = Column(String, nullable=False)
+	class_name = Column(String, unique=True, nullable=False)
 	students_count = Column(Integer, nullable=False)
 	teacher_username = Column(String, ForeignKey("teachers.username"))
 	school_year = Column(String, nullable=False)

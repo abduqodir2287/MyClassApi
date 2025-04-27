@@ -1,4 +1,4 @@
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, or_
 from typing import Optional
 
 from src.domain.teachers.schema import TeachersModel
@@ -13,8 +13,7 @@ class TeachersTable:
         self.async_session = Base.async_session
 
 
-    async def select_teachers(self, username: Optional[str] = None,
-                              teacher_id: Optional[int] = None) -> list[TeachersModel] | TeachersModel:
+    async def select_teachers(self, username: Optional[str] = None) -> list[TeachersModel] | TeachersModel:
         async with self.async_session() as session:
 
             if username is not None:
@@ -24,17 +23,29 @@ class TeachersTable:
 
                 return teacher.scalars().first()
 
-            elif teacher_id is not None:
-                select_teacher = select(Teachers).where(teacher_id == Teachers.id)
-
-                teacher = await session.execute(select_teacher)
-
-                return teacher.scalars().first()
-
             select_users = select(Teachers)
             all_users = await session.execute(select_users)
 
             return all_users.scalars().all()
+
+
+
+    async def select_teachers_like(self, search_value: Optional[str] = None) -> list[TeachersModel]:
+        async with self.async_session() as session:
+            select_teachers = select(Teachers)
+
+            if search_value is not None:
+                select_teachers = select_teachers.where(
+                    or_(
+                        Teachers.username.like(f"%{search_value}%"),
+                        Teachers.firstname.like(f"%{search_value}%"),
+                        Teachers.lastname.like(f"%{search_value}%"),
+                        Teachers.subject.like(f"%{search_value}%")
+                    )
+                )
+
+            result = await session.execute(select_teachers)
+            return result.scalars().all()
 
 
     async def insert_teacher(self, username: str, password: str) -> int:

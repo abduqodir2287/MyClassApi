@@ -1,8 +1,8 @@
 from typing import Optional
-from fastapi import APIRouter, status, Query, Depends
+from fastapi import APIRouter, status, Query, Depends, Path
 
 from src.infrastructure.authentication.service import get_token
-from src.domain.course.schema import ClassModel
+from src.domain.course.schema import ClassModel, GetFullClassInfo
 from src.domain.course.service import ClassRouterService
 from src.domain.schema import ResponseForPost
 
@@ -12,8 +12,16 @@ class_service = ClassRouterService()
 
 
 @class_router.get("", response_model=list[ClassModel], status_code=status.HTTP_200_OK)
-async def get_all_classes() -> list[ClassModel]:
-    return await class_service.get_all_classes_service()
+async def get_all_classes(class_name: Optional[str] = Query(
+    None, description="The name of the class you want to get")) -> list[ClassModel]:
+    return await class_service.get_all_classes_service(class_name=class_name)
+
+
+
+@class_router.get("/{class_name}", response_model=GetFullClassInfo, status_code=status.HTTP_200_OK)
+async def get_full_class_info(class_name: str = Path(
+    ..., description="The name of the class you want to get")) -> GetFullClassInfo:
+    return await class_service.get_full_class_info_service(class_name)
 
 
 @class_router.post("", response_model=ResponseForPost, status_code=status.HTTP_201_CREATED)

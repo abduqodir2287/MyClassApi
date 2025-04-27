@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, or_
 
 from src.domain.students.schema import StudentsModel
 from src.infrastructure.database.postgres.database import Base
@@ -24,17 +24,11 @@ class StudentsTable:
 			return insert_into.id
 
 
-	async def select_students(self, user_id: Optional[int] = None, username: Optional[str] = None,
-							  class_id: Optional[int] = None) -> list[StudentsModel] | StudentsModel:
+	async def select_students(self, username: Optional[str] = None, class_id: Optional[int] = None
+							  ) -> list[StudentsModel] | StudentsModel:
 		async with self.async_session() as session:
 
-			if user_id is not None:
-				select_student = select(Students).where(user_id == Students.id)
-				student = await session.execute(select_student)
-
-				return student.scalars().first()
-
-			elif username is not None:
+			if username is not None:
 				select_student = select(Students).where(username == Students.username)
 				student = await session.execute(select_student)
 
@@ -44,12 +38,30 @@ class StudentsTable:
 				select_student = select(Students).where(class_id == Students.class_id)
 				student = await session.execute(select_student)
 
-				return student.scalars().first()
+				return student.scalars().all()
 
 			select_students = select(Students)
 			all_students = await session.execute(select_students)
 
 			return all_students.scalars().all()
+
+
+
+	async def select_students_like(self, search_value: Optional[str] = None) -> list[StudentsModel]:
+		async with self.async_session() as session:
+			select_students = select(Students)
+
+			if search_value is not None:
+				select_students = select_students.where(
+					or_(
+						Students.username.like(f"%{search_value}%"),
+						Students.firstname.like(f"%{search_value}%"),
+						Students.lastname.like(f"%{search_value}%")
+					)
+				)
+
+			result = await session.execute(select_students)
+			return result.scalars().all()
 
 
 	async def delete_student_by_username(self, username: str) -> bool | None:

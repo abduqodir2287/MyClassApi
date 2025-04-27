@@ -2,10 +2,11 @@ from fastapi import Response, HTTPException, status, Depends, Request
 from sqlalchemy.exc import IntegrityError
 
 from src.configs.logger_setup import logger
-from src.infrastructure.authentication.dependencies import check_user_role
+from src.domain.functions import ClassApiValidationFunctions
 from src.domain.enums import UserRole
 from src.domain.users.schema import AddUserModel, AuthorizedUser, UsersModelForPost, UsersModelForPatch, \
-	UsersStudentModel, UsersModelForGet, UsersModel
+	ChangePasswordModel
+from src.domain.users.schema import	UsersStudentModel, UsersModelForGet, UsersModel
 from src.infrastructure.database.postgres.students.client import StudentsTable
 from src.infrastructure.database.postgres.teachers.client import TeachersTable
 from src.infrastructure.database.postgres.users.client import UsersTable
@@ -13,7 +14,7 @@ from src.infrastructure.authentication.service import create_access_token, get_t
 from src.domain.schema import ResponseForPost
 
 
-class UsersRouterService:
+class UsersRouterService(ClassApiValidationFunctions):
 
 	def __init__(self) -> None:
 		self.users_table = UsersTable()
@@ -26,11 +27,8 @@ class UsersRouterService:
 
 		for user in await self.users_table.select_users():
 			returned_user = UsersModelForGet(
-				id=user.id,
-				username=user.username,
-				role=user.role,
-				created_at=user.created_at,
-				updated_at=user.updated_at
+				id=user.id, username=user.username, role=user.role,
+				created_at=user.created_at, updated_at=user.updated_at
 			)
 
 			all_users.append(returned_user)
@@ -54,9 +52,7 @@ class UsersRouterService:
 	async def get_user_by_username_service(self, username: str) -> UsersModelForGet:
 		user_by_id = await self.users_table.select_users(username=username)
 
-		if not user_by_id:
-			logger.warning("User not found")
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with username '{username}' not found")
+		await self.check_resource(resource=user_by_id, detail=f"User with username '{username}' not found")
 
 		return 	UsersModelForGet(
 			id=user_by_id.id, username=user_by_id.username, role=user_by_id.role,
@@ -66,18 +62,11 @@ class UsersRouterService:
 
 
 	async def get_student_with_password_service(self, username: str, token: str = Depends(get_token)) -> UsersModel:
-		user_role = await check_user_role(token)
-
-		if user_role != UserRole.teacher and user_role != UserRole.superadmin:
-			logger.warning("Not enough rights!")
-
-			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights!")
+		await self.check_role_teacher_and_superadmin(token)
 
 		student = await self.users_table.select_users(username=username)
 
-		if not student:
-			logger.warning("Student not found")
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student with this username not found")
+		await self.check_resource(resource=student, detail="Student with this username not found")
 
 		return UsersModel(
 			id=student.id, username=student.username, password=student.password, role=student.role,
@@ -89,11 +78,9 @@ class UsersRouterService:
 	async def user_authorization_service(self, response: Response, user_model: UsersModelForPost) -> AuthorizedUser:
 		user_by_username = await self.users_table.select_users(username=user_model.username)
 
-		if user_by_username is None:
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User with this username not found")
+		await self.check_resource(resource=user_by_username, detail="User with this username not found")
 
-		if user_by_username.password != user_model.password:
-			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password")
+		await self.check_password(user_model.password, user_by_username.password)
 
 		access_token = create_access_token({"sub": str(user_by_username.id)})
 		response.set_cookie("user_access_token", access_token, httponly=True)
@@ -107,13 +94,7 @@ class UsersRouterService:
 	async def add_teacher_service(self, user_model: UsersModelForPost,
 								  token: str = Depends(get_token)) -> ResponseForPost:
 		try:
-			user_role = await check_user_role(token)
-			allowed_roles = {UserRole.superadmin, UserRole.teacher}
-
-			if user_role not in allowed_roles:
-				logger.warning("Not enough rights!")
-
-				raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights!")
+			await self.check_role_teacher_and_superadmin(token)
 
 			user_id = await self.users_table.insert_user(AddUserModel(
 				username=user_model.username, password=user_model.password, role=UserRole.teacher))
@@ -131,12 +112,7 @@ class UsersRouterService:
 	async def add_student_service(self, user_model: UsersStudentModel,
 								  token: str = Depends(get_token)) -> ResponseForPost:
 		try:
-			user_role = await check_user_role(token)
-
-			if user_role != UserRole.superadmin and user_role != UserRole.teacher:
-				logger.warning("Not enough rights!")
-
-				raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights!")
+			await self.check_role_teacher_and_superadmin(token)
 
 			await self.students_table.insert_student(username=user_model.username, password=user_model.password,
 													 class_id=user_model.class_id)
@@ -177,13 +153,8 @@ class UsersRouterService:
 		try:
 			get_user = await self.users_table.select_users(username=user_model.username)
 
-			if get_user is None:
-				logger.warning("User not found")
-				raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User with this username not found")
-
-			if get_user.password != user_model.password:
-				logger.warning("The user entered an incorrect password.")
-				raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
+			await self.check_resource(resource=get_user, detail="User with this username not found")
+			await self.check_password(user_model.password, get_user.password)
 
 			await self.users_table.update_user_username(user_model.username, user_model.password, user_model.new_username)
 
@@ -192,19 +163,27 @@ class UsersRouterService:
 
 
 
+	async def update_user_password_service(self, user_model: ChangePasswordModel) -> None:
+		get_user = await self.users_table.select_users(username=user_model.username)
+
+		await self.check_resource(resource=get_user, detail="User with this username not found")
+		await self.check_password(user_model.password, get_user.password)
+
+		await self.users_table.update_user_password(user_model.username, user_model.password, user_model.new_password)
+
+
+
 	async def delete_user_service(self, username: str, token: str = Depends(get_token)) -> None:
-		user_role = await check_user_role(token)
+		await self.check_role_teacher_and_superadmin(token)
 
 		user_info = await self.users_table.select_users(username=username)
 
-		if user_role != UserRole.superadmin and user_role != UserRole.teacher:
-			logger.warning("Not enough rights !")
-			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights !")
+		await self.check_resource(resource=user_info, detail="User with this username not found")
 
-		delete_user = await self.users_table.delete_user_by_username(username)
+		if user_info.role == UserRole.superadmin:
+			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Are you crazy? You can't delete a superadmin.")
 
-		if delete_user is None:
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User with this username not found")
+		await self.users_table.delete_user_by_username(username)
 
 		if user_info.role == UserRole.student:
 			await self.students_table.delete_student_by_username(username=username)
