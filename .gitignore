@@ -60,4 +60,5 @@ media/
 .ruff_cache/
 
 # Other files
-/main_tests.py
+main_tests.py
+.dockerignore

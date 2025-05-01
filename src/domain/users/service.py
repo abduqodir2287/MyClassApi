@@ -186,13 +186,25 @@ class UsersRouterService(ClassApiValidationFunctions):
 		await self.users_table.delete_user_by_username(username)
 
 		if user_info.role == UserRole.student:
-			await self.students_table.delete_student_by_username(username=username)
+			await self.students_table.delete_student_by_username(username)
 
 		elif user_info.role == UserRole.teacher:
-			await self.teachers_table.delete_teacher_by_username(username=username)
+			await self.teachers_table.delete_teacher_by_username(username)
 
 
 		logger.info("User deleted successfully")
+
+
+	async def add_first_user(self) -> None:
+		exist_table = await self.users_table.table_exists("users")
+
+		if not exist_table:
+			logger.info("Table Users not found")
+			return
+
+		await self.users_table.create_user_superadmin()
+
+		logger.info("First user superadmin created successfully !")
 
 
 
@@ -207,3 +219,4 @@ class UsersRouterService(ClassApiValidationFunctions):
 		response.delete_cookie(key="user_access_token")
 
 		logger.info("User logged out successfully")
+

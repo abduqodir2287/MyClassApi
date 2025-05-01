@@ -1,0 +1,39 @@
+services:
+  class_api_db:
+    image: postgres:16
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    ports:
+      - "${POSTGRES_PORT}:5431"
+
+    volumes:
+      - class_api_db:/var/lib/postgresql/data/
+
+    restart: on-failure
+
+  class_api:
+    build: .
+    volumes:
+      - .:/src
+
+    command: uvicorn src.main:app --host ${APPLICATION_HOST} --port ${DOCKER_EXPOSED_PORT} --reload
+    ports:
+      - "${APPLICATION_PORT}:${DOCKER_EXPOSED_PORT}"
+
+    env_file:
+      - .env
+
+    environment:
+      - WATCHFILES_FORCE_POLLING=true
+    depends_on:
+      - class_api_db
+
+    restart: on-failure
+
+volumes:
+  class_api_db:
+

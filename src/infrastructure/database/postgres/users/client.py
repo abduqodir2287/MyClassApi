@@ -1,6 +1,7 @@
 from typing import Optional
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, inspect
 
+from src.domain.enums import UserRole
 from src.domain.users.schema import AddUserModel, UsersModel
 from src.infrastructure.database.postgres.models import Users
 from src.infrastructure.database.postgres.database import Base
@@ -10,6 +11,7 @@ class UsersTable:
 	def __init__(self) -> None:
 		self.table = Users()
 		self.async_session = Base.async_session
+		self.engine = Base.engine
 
 
 	async def select_users(self, user_id: Optional[int] = None,
@@ -54,6 +56,26 @@ class UsersTable:
 			return insert_into.id
 
 
+	async def create_user_superadmin(self) -> None:
+		async with self.async_session() as session:
+			async with session.begin():
+
+				stmt = await session.execute(select(Users))
+				user = stmt.scalars().first()
+
+				if user:
+					return
+
+				insert_into = Users(
+					username="admin",
+					password="password",
+					role=UserRole.superadmin,
+				)
+				session.add(insert_into)
+
+				await session.commit()
+
+
 	async def delete_user_by_username(self, username: str) -> bool | None:
 		async with self.async_session() as session:
 			async with session.begin():
@@ -94,5 +116,12 @@ class UsersTable:
 
 				if result.rowcount > 0:
 					return True
+
+
+	async def table_exists(self, table_name: str) -> bool:
+		async with self.engine.connect() as conn:
+			return await conn.run_sync(
+				lambda sync_conn: table_name in inspect(sync_conn).get_table_names()
+			)
 
 

@@ -9,6 +9,9 @@ class Settings(BaseSettings):
 	POSTGRES_PASSWORD: str = None
 	SECRET_KEY: str = None
 	ALGORITHM: str = None
+	APPLICATION_PORT: int = None
+	APPLICATION_HOST: str = None
+	DOCKER_EXPOSED_PORT: int = None
 	LOG_LEVEL: str = None
 	LOG_FORMAT: str = None
 	LOG_FILE: str = None
