@@ -5,6 +5,7 @@ from src.domain.students.schema import StudentsModel, StudentsModelForPatch
 from src.infrastructure.database.postgres.students.client import StudentsTable
 from src.domain.schema import Date
 
+
 class StudentsRouterService(ClassApiValidationFunctions):
 
 	def __init__(self) -> None:
@@ -13,27 +14,19 @@ class StudentsRouterService(ClassApiValidationFunctions):
 
 	async def get_all_students_service(self, search_value: Optional[str] = None, class_id: Optional[int] = None
 									   ) -> list[StudentsModel]:
-		students_list = []
 
 		if class_id is not None:
 			students = await self.students_table.select_students(class_id=class_id)
 		else:
 			students = await self.students_table.select_students_like(search_value=search_value)
 
-		for student in students:
-
-			returned_student = StudentsModel(username=student.username,
-				class_id=student.class_id, firstname=student.firstname, lastname=student.lastname,
-				birthDate=Date(date=student.birthDate) if student.birthDate is not None else student.birthDate, # type: ignore
-				age=student.age, gender=student.gender, subject=student.subject, interests=student.interests,
-				idol=student.idol, bio=student.bio, social_link=student.social_link,
-				created_at=student.created_at, updated_at=student.updated_at
-			)
-
-			students_list.append(returned_student)
-
-		return students_list
-
+		return [
+			StudentsModel.model_validate({
+				**student.__dict__,
+				"birthDate": Date(date=student.birthDate) if student.birthDate else None # type: ignore
+			})
+			for student in students
+		]
 
 
 	async def get_student_by_username_service(self, username: str) -> StudentsModel:
@@ -41,14 +34,10 @@ class StudentsRouterService(ClassApiValidationFunctions):
 
 		await self.check_resource(get_student, detail="Student with this username not found")
 
-		return StudentsModel(
-				username=get_student.username, firstname=get_student.firstname, class_id=get_student.class_id,
-				lastname=get_student.lastname, age=get_student.age, gender=get_student.gender,
-				birthDate=Date(date=get_student.birthDate) if get_student.birthDate is not None else get_student.birthDate, # type: ignore
-				subject=get_student.subject, interests=get_student.interests, idol=get_student.idol,
-				bio=get_student.bio, social_link=get_student.social_link, created_at=get_student.created_at,
-				updated_at=get_student.updated_at
-			)
+		return StudentsModel.model_validate({
+			**get_student.__dict__,
+			"birthDate": Date(date=get_student.birthDate) if get_student.birthDate else None  # type: ignore
+		})
 
 
 

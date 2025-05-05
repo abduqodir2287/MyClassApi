@@ -21,6 +21,10 @@ class StudentsModel(BaseModel):
 	created_at: datetime = Field(..., description="Date and time when the user was created")
 	updated_at: datetime = Field(..., description="Date and time when the user was last updated")
 
+	model_config = {
+		"from_attributes": True
+	}
+
 
 class StudentsModelForPatch(BaseModel):
 	username: str = Field(..., description="Username of the student (e.g., Unique)", min_length=3, max_length=50)

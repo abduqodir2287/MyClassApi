@@ -12,6 +12,10 @@ class UsersModel(BaseModel):
 	created_at: datetime = Field(..., description="Date and time when the user was created")
 	updated_at: datetime = Field(..., description="Date and time when the user was last updated")
 
+	model_config = {
+		"from_attributes": True
+	}
+
 
 class UsersModelForGet(BaseModel):
 	id: int = Field(..., description="Unique identifier of the user", )
@@ -19,6 +23,10 @@ class UsersModelForGet(BaseModel):
 	role: UserRole = Field(..., description="Role assigned to the user (e.g., superadmin, teacher, student or user)")
 	created_at: datetime = Field(..., description="Date and time when the user was created")
 	updated_at: datetime = Field(..., description="Date and time when the user was last updated")
+
+	model_config = {
+		"from_attributes": True
+	}
 
 
 class AddUserModel(BaseModel):

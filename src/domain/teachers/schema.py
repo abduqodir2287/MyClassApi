@@ -20,6 +20,10 @@ class TeachersModel(BaseModel):
     created_at: datetime = Field(..., description="Date and time when the Teacher was created")
     updated_at: datetime = Field(..., description="Date and time when the Teacher was last updated")
 
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class TeachersModelForPatch(BaseModel):
     username: str = Field(..., description="Username of the Teacher (e.g., Unique)")

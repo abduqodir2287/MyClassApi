@@ -23,17 +23,9 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 
 	async def get_all_users_service(self) -> list[UsersModelForGet]:
-		all_users = []
+		all_users = await self.users_table.select_users()
 
-		for user in await self.users_table.select_users():
-			returned_user = UsersModelForGet(
-				id=user.id, username=user.username, role=user.role,
-				created_at=user.created_at, updated_at=user.updated_at
-			)
-
-			all_users.append(returned_user)
-
-		return all_users
+		return [UsersModelForGet.model_validate(user) for user in all_users]
 
 
 
@@ -42,10 +34,7 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 		info = await self.users_table.select_users(user_id=int(user_info.get("sub")))
 
-		return UsersModelForGet(
-			id=info.id, username=info.username, role=info.role,
-			created_at=info.created_at, updated_at=info.updated_at
-		)
+		return UsersModelForGet.model_validate(info)
 
 
 
@@ -54,10 +43,7 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 		await self.check_resource(resource=user_by_id, detail=f"User with username '{username}' not found")
 
-		return 	UsersModelForGet(
-			id=user_by_id.id, username=user_by_id.username, role=user_by_id.role,
-			created_at=user_by_id.created_at, updated_at=user_by_id.updated_at
-		)
+		return 	UsersModelForGet.model_validate(user_by_id)
 
 
 
@@ -68,10 +54,7 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 		await self.check_resource(resource=student, detail="Student with this username not found")
 
-		return UsersModel(
-			id=student.id, username=student.username, password=student.password, role=student.role,
-			created_at=student.created_at, updated_at=student.updated_at
-		)
+		return UsersModel.model_validate(student)
 
 
 
@@ -203,8 +186,6 @@ class UsersRouterService(ClassApiValidationFunctions):
 			return
 
 		await self.users_table.create_user_superadmin()
-
-		logger.info("First user superadmin created successfully !")
 
 
 

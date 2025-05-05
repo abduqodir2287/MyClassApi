@@ -18,6 +18,10 @@ class ClassModel(BaseModel):
     created_at: datetime = Field(..., description="Date and time when the class was created")
     updated_at: datetime = Field(..., description="Date and time when the class was last updated")
 
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class GetFullClassInfo(BaseModel):
     id: int = Field(..., description="The unique id of the Class")

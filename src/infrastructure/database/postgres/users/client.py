@@ -1,22 +1,26 @@
 from typing import Optional
 from sqlalchemy import select, delete, update, inspect
 
+from src.configs.logger_setup import logger
 from src.domain.enums import UserRole
 from src.domain.users.schema import AddUserModel, UsersModel
 from src.infrastructure.database.postgres.models import Users
-from src.infrastructure.database.postgres.database import Base
+from src.infrastructure.database.postgres.database import engine
+from src.infrastructure.database.postgres.session_manager import AsyncSessionManager
+
+
 
 class UsersTable:
 
 	def __init__(self) -> None:
 		self.table = Users()
-		self.async_session = Base.async_session
-		self.engine = Base.engine
+		self.engine = engine
+		self.async_session = AsyncSessionManager()
 
 
 	async def select_users(self, user_id: Optional[int] = None,
 	                       username: Optional[str] = None) -> list[UsersModel] | UsersModel:
-		async with self.async_session() as session:
+		async with self.async_session.get_session() as session:
 
 			if username is not None:
 				select_user = select(Users).where(username == Users.username)
@@ -39,17 +43,16 @@ class UsersTable:
 
 
 	async def insert_user(self, user_model: AddUserModel) -> int:
-		async with self.async_session() as session:
-			async with session.begin():
+		async with self.async_session.get_session_begin() as session:
 
-				insert_into = Users(
-					username=user_model.username,
-					password=user_model.password,
-					role=user_model.role
-				)
-				session.add(insert_into)
+			insert_into = Users(
+				username=user_model.username,
+				password=user_model.password,
+				role=user_model.role
+			)
+			session.add(insert_into)
 
-			await session.commit()
+			await session.flush()
 
 			await session.refresh(insert_into)
 
@@ -57,55 +60,53 @@ class UsersTable:
 
 
 	async def create_user_superadmin(self) -> None:
-		async with self.async_session() as session:
-			async with session.begin():
+		async with self.async_session.get_session_begin() as session:
 
-				stmt = await session.execute(select(Users))
-				user = stmt.scalars().first()
+			stmt = await session.execute(select(Users))
+			user = stmt.scalars().first()
 
-				if user:
-					return
+			if user:
+				return
 
-				insert_into = Users(
-					username="admin",
-					password="password",
-					role=UserRole.superadmin,
-				)
-				session.add(insert_into)
+			insert_into = Users(
+				username="admin",
+				password="password",
+				role=UserRole.superadmin,
+			)
+			session.add(insert_into)
 
-				await session.commit()
+			await session.commit()
+
+			logger.info("First user superadmin created successfully !")
 
 
 	async def delete_user_by_username(self, username: str) -> bool | None:
-		async with self.async_session() as session:
-			async with session.begin():
-				delete_user = delete(Users).where(username == Users.username)
-				result = await session.execute(delete_user)
+		async with self.async_session.get_session_begin() as session:
+			delete_user = delete(Users).where(username == Users.username)
+			result = await session.execute(delete_user)
 
-				await session.commit()
+			await session.commit()
 
-				if result.rowcount > 0:
-					return True
+			if result.rowcount > 0:
+				return True
 
 
 	async def update_user_username(self, username: str, password: str, new_username: str) -> bool | None:
-		async with self.async_session() as session:
-			async with session.begin():
-				update_user = update(Users).where(
-					username == Users.username, password == Users.password).values(
-					username=new_username
-				)
+		async with self.async_session.get_session_begin() as session:
+			update_user = update(Users).where(
+				username == Users.username, password == Users.password).values(
+				username=new_username
+			)
 
-				result = await session.execute(update_user)
-				await session.commit()
+			result = await session.execute(update_user)
+			await session.commit()
 
-				if result.rowcount > 0:
-					return True
+			if result.rowcount > 0:
+				return True
 
 
 	async def update_user_password(self, username: str, password: str, new_password: str) -> bool | None:
-		async with self.async_session() as session:
-			async with session.begin():
+		async with self.async_session.get_session_begin() as session:
 				update_user = update(Users).where(
 					username == Users.username, password == Users.password).values(
 					password=new_password

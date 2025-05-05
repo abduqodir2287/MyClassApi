@@ -26,10 +26,11 @@ async def get_full_class_info(class_name: str = Path(
 
 @class_router.post("", response_model=ResponseForPost, status_code=status.HTTP_201_CREATED)
 async def add_class(
-        class_name: str = Query(..., description="Name of the class", example="11-B, 5-A"),
+        class_name: str = Query(..., description="Name of the class", examples=["11-B", "5-A"]),
         students_count: int = Query(..., description="Number of students in a class"),
         teacher_username: str = Query(..., description="The Class Teacher username"),
-        school_year: str = Query(..., description="Academic year", example="2024-2025"), token: str = Depends(get_token)
+        school_year: str = Query(..., description="Academic year", examples=["2024-2025"]),
+        token: str = Depends(get_token)
 ) -> ResponseForPost:
     return await class_service.add_class_service(class_name, students_count, teacher_username, school_year, token)
 

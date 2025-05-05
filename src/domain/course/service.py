@@ -22,17 +22,9 @@ class ClassRouterService(ClassRouterFunctions, TeachersRouterService):
 
 
     async def get_all_classes_service(self, class_name: Optional[str] = None) -> list[ClassModel]:
-        all_classes = []
+        get_classes = await self.class_table.select_class_like(class_name)
 
-        for course in await self.class_table.select_class_like(class_name):
-
-            all_classes.append(await self.class_model_formatter(
-                course.id, course.class_name, course.teacher_username, course.students_count, course.school_year,
-                course.class_leader_username, course.description, course.class_room_number, course.created_at,
-                course.updated_at
-            ))
-
-        return all_classes
+        return [ClassModel.model_validate(course) for course in get_classes]
 
 
 

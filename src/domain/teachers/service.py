@@ -15,19 +15,15 @@ class TeachersRouterService(StudentsRouterService):
 
 
     async def get_all_teachers_service(self, search_value: Optional[str] = None) -> list[TeachersModel]:
-        teachers_list = []
+        all_teachers = await self.teachers_table.select_teachers_like(search_value)
 
-        for teacher in await self.teachers_table.select_teachers_like(search_value):
-            returned_teacher = TeachersModel(
-                username=teacher.username, firstname=teacher.firstname, lastname=teacher.lastname,
-                birthDate=Date(date=teacher.birthDate) if teacher.birthDate is not None else teacher.birthDate, # type: ignore
-                age=teacher.age, gender=teacher.gender, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
-                social_link=teacher.social_link, created_at=teacher.created_at, updated_at=teacher.updated_at
-            )
-
-            teachers_list.append(returned_teacher)
-
-        return teachers_list
+        return [
+            TeachersModel.model_validate({
+                **teacher.__dict__,
+                "birthDate": Date(date=teacher.birthDate) if teacher.birthDate else None  # type: ignore
+        })
+            for teacher in all_teachers
+        ]
 
 
     async def get_teacher_by_username_service(self, username: str) -> TeachersModel:
@@ -35,12 +31,10 @@ class TeachersRouterService(StudentsRouterService):
 
         await self.check_resource(resource=teacher, detail="Teacher with this username not found")
 
-        return TeachersModel(
-            username=username, firstname=teacher.firstname, lastname=teacher.lastname,
-            birthDate=Date(date=teacher.birthDate) if teacher.birthDate is not None else None, # type: ignore
-            age=teacher.age, gender=teacher.gender, subject=teacher.subject, idol=teacher.idol, bio=teacher.bio,
-            social_link=teacher.social_link, created_at=teacher.created_at, updated_at=teacher.updated_at
-        )
+        return TeachersModel.model_validate({
+            **teacher.__dict__,
+            "birthDate": Date(date=teacher.birthDate) if teacher.birthDate else None  # type: ignore
+        })
 
 
     async def update_teacher_info_service(self, teacher_model: TeachersModelForPatch) -> TeachersModel:
