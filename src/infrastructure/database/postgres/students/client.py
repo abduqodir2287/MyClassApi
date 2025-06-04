@@ -94,3 +94,28 @@ class StudentsTable:
 				return True
 
 
+	async def update_student_username(self, username: str, password: str, new_username: str) -> bool | None:
+		async with self.async_session.get_session_begin() as session:
+			update_student = update(Students).where(
+				username == Students.username, password == Students.password
+			).values(username=new_username)
+
+			result = await session.execute(update_student)
+			await session.commit()
+
+			if result.rowcount > 0:
+				return True
+
+
+	async def update_student_password(self, username: str, password: str, new_password: str) -> bool | None:
+		async with self.async_session.get_session_begin() as session:
+			update_student = update(Students).where(
+				username == Students.username, password == Students.password
+			).values(password=new_password)
+
+			result = await session.execute(update_student)
+			await session.commit()
+
+			if result.rowcount > 0:
+				return True
+

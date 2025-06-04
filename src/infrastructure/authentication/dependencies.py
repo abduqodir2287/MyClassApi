@@ -8,7 +8,7 @@ from src.infrastructure.database.postgres.users.client import UsersTable
 users_table = UsersTable()
 
 
-async def check_user_role(token: str = Depends(get_token)) -> UserRole:
+async def check_user_role(token: str = Depends(get_token)) -> UserRole | None:
 	payload = decode_access_token(token)
 
 	expire = payload.get("expire")
@@ -17,7 +17,10 @@ async def check_user_role(token: str = Depends(get_token)) -> UserRole:
 
 	expire_time = datetime.fromtimestamp(int(expire), tz=timezone.utc)
 	if expire_time < datetime.now(timezone.utc):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Token expired')
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail='Token expired!. Please sign in to your account again.'
+		)
 
 	user_id = int(payload.get("sub"))
 	user_by_id = await users_table.select_users(user_id=user_id)

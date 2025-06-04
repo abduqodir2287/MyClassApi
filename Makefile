@@ -14,4 +14,7 @@ up-build:
 	docker compose up --build
 
 down:
-	docker compose down
+	docker compose down -v
+
+docker-alembic-upg:
+	docker exec -it myclassapi-class_api-1 alembic upgrade head

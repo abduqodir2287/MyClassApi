@@ -22,7 +22,7 @@ class ClassRouterService(ClassRouterFunctions, TeachersRouterService):
 
 
     async def get_all_classes_service(self, class_name: Optional[str] = None) -> list[ClassModel]:
-        get_classes = await self.class_table.select_class_like(class_name)
+        get_classes = await self.class_table.select_class_like(class_name=class_name)
 
         return [ClassModel.model_validate(course) for course in get_classes]
 
@@ -51,8 +51,10 @@ class ClassRouterService(ClassRouterFunctions, TeachersRouterService):
 
 
 
-    async def add_class_service(self, class_name: str, students_count: int, teacher_username: str, school_year: str,
-                                token: str = Depends(get_token)) -> ResponseForPost:
+    async def add_class_service(
+            self, class_name: str, students_count: int, teacher_username: str, school_year: str,
+            token: str = Depends(get_token)
+    ) -> ResponseForPost | None:
         try:
             await self.check_role_teacher_and_superadmin(token)
 
@@ -65,8 +67,29 @@ class ClassRouterService(ClassRouterFunctions, TeachersRouterService):
                 return ResponseForPost(ID=class_id)
 
         except IntegrityError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher with this username not found!")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Teacher with this username not found or Class with this name already exist!"
+            )
 
+
+    async def delete_class_service(
+            self, class_name: str, token: str = Depends(get_token)
+    ) -> None:
+        try:
+            await self.check_role_teacher_and_superadmin(token)
+
+            get_class = await self.class_table.select_classes(class_name=class_name)
+
+            await self.check_resource(resource=get_class, detail="Class with this class name not found")
+
+            await self.class_table.delete_class(class_name=class_name)
+
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot delete a class that has students."
+            )
 
 
     async def update_class_info_service(
@@ -100,7 +123,7 @@ class ClassRouterService(ClassRouterFunctions, TeachersRouterService):
             class_info.created_at, class_info.updated_at
         )
 
-        update = await self.class_table.update_class_info(class_model)
+        update = await self.class_table.update_class_info(class_model=class_model)
 
         if update:
             return class_model

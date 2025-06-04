@@ -1,5 +1,6 @@
 from typing import Optional
 
+
 from src.domain.students.service import StudentsRouterService
 from src.domain.teachers.schema import TeachersModel, TeachersModelForPatch
 from src.infrastructure.database.postgres.teachers.client import TeachersTable
@@ -37,7 +38,7 @@ class TeachersRouterService(StudentsRouterService):
         })
 
 
-    async def update_teacher_info_service(self, teacher_model: TeachersModelForPatch) -> TeachersModel:
+    async def update_teacher_info_service(self, teacher_model: TeachersModelForPatch) -> TeachersModel | None:
         teacher_info = await self.teachers_table.select_teachers(username=teacher_model.username)
 
         await self.check_resource(resource=teacher_info, detail="Teacher with this username not found")
@@ -62,7 +63,8 @@ class TeachersRouterService(StudentsRouterService):
             created_at=teacher_info.created_at, updated_at=teacher_info.updated_at
         )
 
-        update = await self.teachers_table.update_teacher_info(teacher_model.username, teacher_model.password, returned_teacher)
+        update = await self.teachers_table.update_teacher_info(teacher_model.username,
+                                                               teacher_model.password, returned_teacher)
 
         if update:
             return returned_teacher

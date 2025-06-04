@@ -15,7 +15,9 @@ async def get_all_teachers(search_value: Optional[str] = None) -> list[TeachersM
 
 
 @teachers_router.get("/{username}", response_model=TeachersModel, status_code=status.HTTP_200_OK)
-async def get_by_username(username: str = Path(..., description="Account username of the Teacher")) -> TeachersModel:
+async def get_by_username(
+		username: str = Path(..., description="Account username of the Teacher")
+) -> TeachersModel:
 	return await teachers_service.get_teacher_by_username_service(username=username)
 
 

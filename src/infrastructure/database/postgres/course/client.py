@@ -1,21 +1,20 @@
 from typing import Optional
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 
-from src.infrastructure.database.postgres.session_manager import AsyncSessionManager
 from src.infrastructure.database.postgres.models import Class
 from src.domain.course.schema import ClassModel, ClassModelForPost
+from src.infrastructure.database.postgres.session_manager import AsyncSessionManager
 
 
 class ClassTable:
 
     def __init__(self) -> None:
-        self.table = Class()
         self.async_session = AsyncSessionManager()
 
 
 
     async def select_classes(self, class_id: Optional[int] = None,
-                             class_name: Optional[str] = None) -> list[ClassModel] | ClassModel:
+                             class_name: Optional[str] = None) -> list[ClassModel] | ClassModel | None:
         async with self.async_session.get_session() as session:
 
             if class_name is not None:
@@ -38,8 +37,7 @@ class ClassTable:
             return all_classes.scalars().all()
 
 
-
-    async def select_class_like(self, class_name: Optional[str] = None) -> list[ClassModel]:
+    async def select_class_like(self, class_name: Optional[str] = None) -> list[Class]:
         async with self.async_session.get_session() as session:
             select_classes = select(Class)
 
@@ -80,6 +78,17 @@ class ClassTable:
             if result.rowcount > 0:
                 return True
 
+
+    async def delete_class(self, class_name: str) -> bool | None:
+        async with self.async_session.get_session() as session:
+            stmt = delete(Class).where(class_name == Class.class_name)
+
+            result = await session.execute(stmt)
+
+            await session.commit()
+
+            if result.rowcount > 0:
+                return True
 
 
 

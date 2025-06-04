@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from src.infrastructure.database.postgres.models import * # noqa
-from src.configs.config import settings
+from src.configs.config import get_settings
 from src.infrastructure.database.postgres.database import Base
 
 config = context.config
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL + "?async_fallback=True")
+config.set_main_option("sqlalchemy.url", get_settings().DATABASE_URL + "?async_fallback=True")
 
 
 if config.config_file_name is not None:

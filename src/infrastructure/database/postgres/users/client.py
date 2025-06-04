@@ -9,17 +9,14 @@ from src.infrastructure.database.postgres.database import engine
 from src.infrastructure.database.postgres.session_manager import AsyncSessionManager
 
 
-
 class UsersTable:
 
 	def __init__(self) -> None:
-		self.table = Users()
-		self.engine = engine
 		self.async_session = AsyncSessionManager()
 
 
 	async def select_users(self, user_id: Optional[int] = None,
-	                       username: Optional[str] = None) -> list[UsersModel] | UsersModel:
+	                       username: Optional[str] = None) -> list[UsersModel] | UsersModel | None:
 		async with self.async_session.get_session() as session:
 
 			if username is not None:
@@ -61,7 +58,6 @@ class UsersTable:
 
 	async def create_user_superadmin(self) -> None:
 		async with self.async_session.get_session_begin() as session:
-
 			stmt = await session.execute(select(Users))
 			user = stmt.scalars().first()
 
@@ -107,20 +103,21 @@ class UsersTable:
 
 	async def update_user_password(self, username: str, password: str, new_password: str) -> bool | None:
 		async with self.async_session.get_session_begin() as session:
-				update_user = update(Users).where(
-					username == Users.username, password == Users.password).values(
-					password=new_password
-				)
+			update_user = update(Users).where(
+				username == Users.username, password == Users.password).values(
+				password=new_password
+			)
 
-				result = await session.execute(update_user)
-				await session.commit()
+			result = await session.execute(update_user)
+			await session.commit()
 
-				if result.rowcount > 0:
-					return True
+			if result.rowcount > 0:
+				return True
 
 
-	async def table_exists(self, table_name: str) -> bool:
-		async with self.engine.connect() as conn:
+	@staticmethod
+	async def table_exists(table_name: str) -> bool:
+		async with engine.connect() as conn:
 			return await conn.run_sync(
 				lambda sync_conn: table_name in inspect(sync_conn).get_table_names()
 			)

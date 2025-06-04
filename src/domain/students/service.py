@@ -12,8 +12,9 @@ class StudentsRouterService(ClassApiValidationFunctions):
 		self.students_table = StudentsTable()
 
 
-	async def get_all_students_service(self, search_value: Optional[str] = None, class_id: Optional[int] = None
-									   ) -> list[StudentsModel]:
+	async def get_all_students_service(
+			self, search_value: Optional[str] = None, class_id: Optional[int] = None
+	) -> list[StudentsModel]:
 
 		if class_id is not None:
 			students = await self.students_table.select_students(class_id=class_id)

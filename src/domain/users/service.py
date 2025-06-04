@@ -4,8 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from src.configs.logger_setup import logger
 from src.domain.functions import ClassApiValidationFunctions
 from src.domain.enums import UserRole
-from src.domain.users.schema import AddUserModel, AuthorizedUser, UsersModelForPost, UsersModelForPatch, \
-	ChangePasswordModel
+from src.domain.users.schema import AddUserModel, AuthorizedUser, UsersModelForPost
+from src.domain.users.schema import ChangePasswordModel, UsersModelForPatch
 from src.domain.users.schema import	UsersStudentModel, UsersModelForGet, UsersModel
 from src.infrastructure.database.postgres.students.client import StudentsTable
 from src.infrastructure.database.postgres.teachers.client import TeachersTable
@@ -43,11 +43,13 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 		await self.check_resource(resource=user_by_id, detail=f"User with username '{username}' not found")
 
-		return 	UsersModelForGet.model_validate(user_by_id)
+		return UsersModelForGet.model_validate(user_by_id)
 
 
 
-	async def get_student_with_password_service(self, username: str, token: str = Depends(get_token)) -> UsersModel:
+	async def get_student_with_password_service(
+			self, username: str, token: str = Depends(get_token)
+	) -> UsersModel:
 		await self.check_role_teacher_and_superadmin(token)
 
 		student = await self.users_table.select_users(username=username)
@@ -58,7 +60,9 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 
 
-	async def user_authorization_service(self, response: Response, user_model: UsersModelForPost) -> AuthorizedUser:
+	async def user_authorization_service(
+			self, response: Response, user_model: UsersModelForPost
+	) -> AuthorizedUser:
 		user_by_username = await self.users_table.select_users(username=user_model.username)
 
 		await self.check_resource(resource=user_by_username, detail="User with this username not found")
@@ -74,12 +78,13 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 
 
-	async def add_teacher_service(self, user_model: UsersModelForPost,
-								  token: str = Depends(get_token)) -> ResponseForPost:
+	async def add_teacher_service(
+			self, user_model: UsersModelForPost, token: str = Depends(get_token)
+	) -> ResponseForPost:
 		try:
 			await self.check_role_teacher_and_superadmin(token)
 
-			user_id = await self.users_table.insert_user(AddUserModel(
+			user_id = await self.users_table.insert_user(user_model=AddUserModel(
 				username=user_model.username, password=user_model.password, role=UserRole.teacher))
 
 			await self.teachers_table.insert_teacher(user_model.username, user_model.password)
@@ -92,15 +97,18 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 
 
-	async def add_student_service(self, user_model: UsersStudentModel,
-								  token: str = Depends(get_token)) -> ResponseForPost:
+	async def add_student_service(
+			self, user_model: UsersStudentModel, token: str = Depends(get_token)
+	) -> ResponseForPost:
 		try:
 			await self.check_role_teacher_and_superadmin(token)
 
-			await self.students_table.insert_student(username=user_model.username, password=user_model.password,
-													 class_id=user_model.class_id)
+			await self.students_table.insert_student(
+				username=user_model.username,
+				password=user_model.password, class_id=user_model.class_id
+			)
 
-			user_id = await self.users_table.insert_user(AddUserModel(
+			user_id = await self.users_table.insert_user(user_model=AddUserModel(
 				username=user_model.username, password=user_model.password, role=UserRole.student))
 
 			logger.info("Teacher successfully added to DB")
@@ -113,11 +121,13 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 
 
-	async def add_just_user_service(self, response: Response, user_model: UsersModelForPost) -> AuthorizedUser:
+	async def add_just_user_service(
+			self, response: Response, user_model: UsersModelForPost
+	) -> AuthorizedUser:
 		try:
 			user_model = AddUserModel(username=user_model.username, password=user_model.password, role=UserRole.user)
 
-			user_id = await self.users_table.insert_user(user_model)
+			user_id = await self.users_table.insert_user(user_model=user_model)
 
 			access_token = create_access_token({"sub": str(user_id)})
 			response.set_cookie("user_access_token", access_token, httponly=True)
@@ -139,7 +149,15 @@ class UsersRouterService(ClassApiValidationFunctions):
 			await self.check_resource(resource=get_user, detail="User with this username not found")
 			await self.check_password(user_model.password, get_user.password)
 
-			await self.users_table.update_user_username(user_model.username, user_model.password, user_model.new_username)
+			if get_user.role == UserRole.teacher:
+				raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher username cannot be changed")
+
+			await self.users_table.update_user_username(user_model.username,
+														user_model.password, user_model.new_username)
+
+			if get_user.role == UserRole.student:
+				await self.students_table.update_student_username(user_model.username,
+																  user_model.password, user_model.new_username)
 
 		except IntegrityError:
 			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this username already exists")
@@ -152,6 +170,14 @@ class UsersRouterService(ClassApiValidationFunctions):
 		await self.check_resource(resource=get_user, detail="User with this username not found")
 		await self.check_password(user_model.password, get_user.password)
 
+		if get_user.role == UserRole.student:
+			await self.students_table.update_student_password(user_model.username,
+															  user_model.password, user_model.new_password)
+
+		elif get_user.role == UserRole.teacher:
+			await self.teachers_table.update_teacher_password(user_model.username,
+															  user_model.password, user_model.new_password)
+
 		await self.users_table.update_user_password(user_model.username, user_model.password, user_model.new_password)
 
 
@@ -163,16 +189,13 @@ class UsersRouterService(ClassApiValidationFunctions):
 
 		await self.check_resource(resource=user_info, detail="User with this username not found")
 
-		if user_info.role == UserRole.superadmin:
-			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Are you crazy? You can't delete a superadmin.")
+		if user_info.role == UserRole.superadmin or user_info.role == UserRole.teacher:
+			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Are you crazy? You can't delete a superadmin and teacher.")
 
 		await self.users_table.delete_user_by_username(username)
 
 		if user_info.role == UserRole.student:
 			await self.students_table.delete_student_by_username(username)
-
-		elif user_info.role == UserRole.teacher:
-			await self.teachers_table.delete_teacher_by_username(username)
 
 
 		logger.info("User deleted successfully")

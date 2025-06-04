@@ -2,7 +2,7 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, Request, Depends, status
 
-from src.configs.config import settings
+from src.configs.config import get_settings
 from src.configs.logger_setup import logger
 
 
@@ -11,7 +11,7 @@ def create_access_token(data: dict) -> str:
 
 	expire = datetime.now(timezone.utc) + timedelta(days=1)
 	to_encode.update({"expire": int(expire.timestamp())})
-	auth_data = settings.GET_AUTH_DATA
+	auth_data = get_settings().GET_AUTH_DATA
 
 	encoded_token = jwt.encode(to_encode, auth_data["secret_key"], algorithm=auth_data["algorithm"])
 
@@ -30,7 +30,7 @@ def get_token(request: Request) -> str | None:
 
 def decode_access_token(token: str = Depends(get_token)) -> dict | None:
 	try:
-		auth_data = settings.GET_AUTH_DATA
+		auth_data = get_settings().GET_AUTH_DATA
 		payload = jwt.decode(token, auth_data["secret_key"], algorithms=auth_data["algorithm"])
 	except JWTError:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token!")

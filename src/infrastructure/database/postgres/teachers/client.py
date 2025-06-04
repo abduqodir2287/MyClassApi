@@ -1,5 +1,6 @@
-from sqlalchemy import select, update, delete, or_
+from sqlalchemy import select, update, or_
 from typing import Optional
+
 
 from src.domain.teachers.schema import TeachersModel
 from src.infrastructure.database.postgres.models import Teachers
@@ -9,13 +10,11 @@ from src.infrastructure.database.postgres.session_manager import AsyncSessionMan
 class TeachersTable:
 
     def __init__(self) -> None:
-        self.table = Teachers()
         self.async_session = AsyncSessionManager()
 
 
     async def select_teachers(self, username: Optional[str] = None) -> list[TeachersModel] | TeachersModel:
         async with self.async_session.get_session() as session:
-
             if username is not None:
                 select_teacher = select(Teachers).where(username == Teachers.username)
 
@@ -63,20 +62,8 @@ class TeachersTable:
             return insert_into.id
 
 
-    async def delete_teacher_by_username(self, username: str) -> bool | None:
-        async with self.async_session.get_session_begin() as session:
-            delete_teacher = delete(Teachers).where(username == Teachers.username)
-            result = await session.execute(delete_teacher)
-
-            await session.commit()
-
-            if result.rowcount > 0:
-                return True
-
-
     async def update_teacher_info(self, username: str, password: str, teacher_info: TeachersModel) -> bool | None:
         async with self.async_session.get_session_begin() as session:
-
             update_teacher = update(Teachers).where(
                 username == Teachers.username, password == Teachers.password
             ).values(
@@ -85,6 +72,19 @@ class TeachersTable:
                 age=teacher_info.age, gender=teacher_info.gender, subject=teacher_info.subject,
                 idol=teacher_info.idol, bio=teacher_info.bio, social_link=teacher_info.social_link
             )
+
+            result = await session.execute(update_teacher)
+            await session.commit()
+
+            if result.rowcount > 0:
+                return True
+
+
+    async def update_teacher_password(self, username: str, password: str, new_password: str) -> bool | None:
+        async with self.async_session.get_session() as session:
+            update_teacher = update(Teachers).where(
+                username == Teachers.username, password == Teachers.password
+            ).values(password=new_password)
 
             result = await session.execute(update_teacher)
             await session.commit()

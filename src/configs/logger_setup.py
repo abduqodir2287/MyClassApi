@@ -1,17 +1,17 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from src.configs.config import settings
+from src.configs.config import get_settings
 
 logger = logging.getLogger("MyClassApi")
-logger.setLevel(level=settings.LOG_LEVEL)
+logger.setLevel(level=get_settings().LOG_LEVEL)
 
-formatter = logging.Formatter(settings.LOG_FORMAT)
+formatter = logging.Formatter(get_settings().LOG_FORMAT)
 
-if settings.LOG_WRITE_STATUS:
+if get_settings().LOG_WRITE_STATUS:
     filehandler = RotatingFileHandler(
-        filename=settings.LOG_FILE,
-        backupCount=settings.LOG_BACKUP_COUNT,
+        filename=get_settings().LOG_FILE,
+        backupCount=get_settings().LOG_BACKUP_COUNT,
         mode='w'
     )
     filehandler.setFormatter(formatter)

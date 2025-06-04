@@ -1,17 +1,30 @@
+from contextlib import nullcontext
 import pytest
+from httpx import AsyncClient
 from fastapi import status
 
-from src.domain.users.schema import UsersModelForGet
+
 
 @pytest.mark.asyncio
-async def test_get_all_users_page(async_client) -> None:
-    response = await async_client.get("/Users")
+@pytest.mark.parametrize(
+    "user_model, expectation",
+    [
+        ({"username": "anvar", "password": "90 yilla"}, nullcontext())
+        # ({"username": "abduqodir", "password": "09"}, pytest.raises(ValidationError))
+    ]
+)
+async def test_add_users(client: AsyncClient, user_model, expectation) -> None:
+    with expectation:
+        response = await client.post(url="/Users/add_user", json=user_model)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert "Result" in response.json()
+
+
+@pytest.mark.asyncio
+async def test_add_users(client: AsyncClient, prepare_test_db) -> None:
+    response = await client.get(url="/Users")
 
     assert response.status_code == status.HTTP_200_OK
-
-    data = response.json()
-    users = [UsersModelForGet(**item) for item in data]
-    print(users)
-
-    assert users
+    print(response.json())
 

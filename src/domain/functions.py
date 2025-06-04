@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from pydantic import BaseModel
 
@@ -21,7 +23,7 @@ class ClassApiValidationFunctions:
 
 
     @staticmethod
-    async def check_resource(resource: BaseModel, detail: str) -> None:
+    async def check_resource(resource: BaseModel, detail: Optional[str] = "Resource not found") -> None:
         
         if not resource:
             logger.info("Resource not found")

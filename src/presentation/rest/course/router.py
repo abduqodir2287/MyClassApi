@@ -12,19 +12,21 @@ class_service = ClassRouterService()
 
 
 @class_router.get("", response_model=list[ClassModel], status_code=status.HTTP_200_OK)
-async def get_all_classes(class_name: Optional[str] = Query(
-    None, description="The name of the class you want to get")) -> list[ClassModel]:
+async def get_all_classes(
+        class_name: Optional[str] = Query(None, description="The name of the class you want to get")
+) -> list[ClassModel]:
     return await class_service.get_all_classes_service(class_name=class_name)
 
 
 
 @class_router.get("/{class_name}", response_model=GetFullClassInfo, status_code=status.HTTP_200_OK)
-async def get_full_class_info(class_name: str = Path(
-    ..., description="The name of the class you want to get")) -> GetFullClassInfo:
+async def get_full_class_info(
+        class_name: str = Path(..., description="The name of the class you want to get")
+) -> GetFullClassInfo:
     return await class_service.get_full_class_info_service(class_name)
 
 
-@class_router.post("", response_model=ResponseForPost, status_code=status.HTTP_201_CREATED)
+@class_router.post("/add", response_model=ResponseForPost, status_code=status.HTTP_201_CREATED)
 async def add_class(
         class_name: str = Query(..., description="Name of the class", examples=["11-B", "5-A"]),
         students_count: int = Query(..., description="Number of students in a class"),
@@ -32,7 +34,16 @@ async def add_class(
         school_year: str = Query(..., description="Academic year", examples=["2024-2025"]),
         token: str = Depends(get_token)
 ) -> ResponseForPost:
-    return await class_service.add_class_service(class_name, students_count, teacher_username, school_year, token)
+    return await class_service.add_class_service(class_name, students_count, teacher_username,
+                                                 school_year, token)
+
+
+@class_router.delete("/delete/{class_name}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_class(
+        class_name: str = Path(..., description="Name the class you want to delete"),
+        token: str = Depends(get_token)
+) -> None:
+    await class_service.delete_class_service(class_name, token)
 
 
 @class_router.patch("/change_info", response_model=ClassModel, status_code=status.HTTP_200_OK)
@@ -45,7 +56,7 @@ async def update_class_info(
         class_room_number: Optional[int] = Query(None, description="Just Class room number"),
         token: str = Depends(get_token)
 ) -> ClassModel:
-    return await class_service.update_class_info_service(class_name, students_count, school_year, class_leader_username,
-                                                         description, class_room_number, token)
+    return await class_service.update_class_info_service(class_name, students_count, school_year,
+                                                         class_leader_username, description, class_room_number, token)
 
 
